@@ -251,66 +251,68 @@ typedef struct {
 //     }
 // }
 
-void executeInstruction(PCB* process, char* instruction) {
-    if (strncmp(instruction, "print ", 6) == 0) {
-        semWait(&userOutput, process->processID);
-        printf("%s\n", instruction + 6);
-        semSignal(&userOutput);
-    } else if (strncmp(instruction, "assign ", 7) == 0) {
-        // Handle variable assignment
-    } else if (strncmp(instruction, "writeFile ", 10) == 0) {
-        semWait(&fileAccess, process->processID);
-        // Handle file writing
-        semSignal(&fileAccess);
-    } else if (strncmp(instruction, "readFile ", 9) == 0) {
-        semWait(&fileAccess, process->processID);
-        // Handle file reading
-        semSignal(&fileAccess);
-    } else if (strncmp(instruction, "printFromTo ", 12) == 0) {
-        int x, y;
-        sscanf(instruction + 12, "%d %d", &x, &y);
-        for (int i = x; i <= y; i++) {
-            printf("%d ", i);
-        }
-        printf("\n");
-    } else if (strncmp(instruction, "semWait ", 8) == 0) {
-        // Handle semaphore wait
-    } else if (strncmp(instruction, "semSignal ", 10) == 0) {
-        // Handle semaphore signal
-    }
-}
 
-void executeProcess(PCB* process) {
-    while (process->programCounter < MAX_INSTRUCTIONS && strlen(process->instructions[process->programCounter]) > 0) {
-        executeInstruction(process, process->instructions[process->programCounter]);
-        process->programCounter++;
-    }
-    strcpy(process->state, "Finished");
-}
+////////////////////////////////////////////////////////////////////////////////
+// void executeInstruction(PCB* process, char* instruction) {
+//     if (strncmp(instruction, "print ", 6) == 0) {
+//         semWait(&userOutput, process->processID);
+//         printf("%s\n", instruction + 6);
+//         semSignal(&userOutput);
+//     } else if (strncmp(instruction, "assign ", 7) == 0) {
+//         // Handle variable assignment
+//     } else if (strncmp(instruction, "writeFile ", 10) == 0) {
+//         semWait(&fileAccess, process->processID);
+//         // Handle file writing
+//         semSignal(&fileAccess);
+//     } else if (strncmp(instruction, "readFile ", 9) == 0) {
+//         semWait(&fileAccess, process->processID);
+//         // Handle file reading
+//         semSignal(&fileAccess);
+//     } else if (strncmp(instruction, "printFromTo ", 12) == 0) {
+//         int x, y;
+//         sscanf(instruction + 12, "%d %d", &x, &y);
+//         for (int i = x; i <= y; i++) {
+//             printf("%d ", i);
+//         }
+//         printf("\n");
+//     } else if (strncmp(instruction, "semWait ", 8) == 0) {
+//         // Handle semaphore wait
+//     } else if (strncmp(instruction, "semSignal ", 10) == 0) {
+//         // Handle semaphore signal
+//     }
+// }
 
-void schedule() {
-    PCB* currentProcess = getNextProcess();
-    while (currentProcess != NULL) {
-        executeProcess(currentProcess);
-        printf("Process %d executed.\n", currentProcess->processID);
-        currentProcess = getNextProcess();
-    }
-}
+// void executeProcess(PCB* process) {
+//     while (process->programCounter < MAX_INSTRUCTIONS && strlen(process->instructions[process->programCounter]) > 0) {
+//         executeInstruction(process, process->instructions[process->programCounter]);
+//         process->programCounter++;
+//     }
+//     strcpy(process->state, "Finished");
+// }
 
-void loadProcess(PCB* process, int id, int priority, char instructions[MAX_INSTRUCTIONS][50]) {
-    process->processID = id;
-    strcpy(process->state, "Ready");
-    process->priority = priority;
-    process->programCounter = 0;
-    process->memoryLowerBound = memoryIndex;
-    process->memoryUpperBound = memoryIndex + 10;
-    for (int i = 0; i < MAX_INSTRUCTIONS; i++) {
-        strcpy(process->instructions[i], instructions[i]);
-    }
-    memoryIndex += 10;
-    addProcessToQueue(process, priority);
-}
+// void schedule() {
+//     PCB* currentProcess = getNextProcess();
+//     while (currentProcess != NULL) {
+//         executeProcess(currentProcess);
+//         printf("Process %d executed.\n", currentProcess->processID);
+//         currentProcess = getNextProcess();
+//     }
+// }
 
+// void loadProcess(PCB* process, int id, int priority, char instructions[MAX_INSTRUCTIONS][50]) {
+//     process->processID = id;
+//     strcpy(process->state, "Ready");
+//     process->priority = priority;
+//     process->programCounter = 0;
+//     process->memoryLowerBound = memoryIndex;
+//     process->memoryUpperBound = memoryIndex + 10;
+//     for (int i = 0; i < MAX_INSTRUCTIONS; i++) {
+//         strcpy(process->instructions[i], instructions[i]);
+//     }
+//     memoryIndex += 10;
+//     addProcessToQueue(process, priority);
+// }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // int main() {
 //     initializeQueues();
 

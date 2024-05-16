@@ -5,10 +5,12 @@
 #define MAX_PROCESSES 10
 #define MAX_PRIORITY_LEVELS 4
 #define MAX_INSTRUCTIONS 10
+#define MAX_SIZE 100
 #define MAX_BLOCKED 10
 #define PCB1_START 30
 #define PCB2_START 36
 #define PCB3_START 42
+
 typedef struct
 {
     char name[20];
@@ -25,12 +27,143 @@ typedef struct
     int memoryUpperBound;
 } PCB;
 
-Word Memory[MEMORY_SIZE];
-
-void intToStr(int value, char *str)
+typedef enum
 {
-    sprintf(str, "%d", value);
+    false = 0,
+    true = 1
+} bool;
+
+typedef struct
+{
+    int items[MAX_SIZE];
+    int front;
+    int rear;
+    unsigned int size;
+} Queue;
+
+void initializeQueue(Queue *queue)
+{
+    queue->front = 0;
+    queue->rear = -1;
+    queue->size = 0;
 }
+
+bool isEmpty(Queue *queue)
+{
+    return (queue->size == 0);
+}
+
+bool isFull(Queue *queue)
+{
+    return (queue->size == MAX_SIZE);
+}
+
+// Get the size of the queue
+int size(Queue *queue)
+{
+    return queue->size;
+}
+
+// Enqueue an element into the queue
+void enqueue(Queue *queue, int value)
+{
+    if (isFull(queue))
+    {
+        printf("Queue is full. Cannot enqueue.\n");
+        return;
+    }
+    queue->rear = (queue->rear + 1) % MAX_SIZE;
+    queue->items[queue->rear] = value;
+    queue->size++;
+}
+
+// Dequeue an element from the queue
+int dequeue(Queue *queue)
+{
+    if (isEmpty(queue))
+    {
+        printf("Queue is empty. Cannot dequeue.\n");
+        return -1;
+    }
+    int value = queue->items[queue->front];
+    queue->front = (queue->front + 1) % MAX_SIZE;
+    queue->size--;
+    return value;
+}
+
+// Display the queue
+void display(Queue *queue)
+{
+    if (isEmpty(queue))
+    {
+        printf("Queue is empty.\n");
+        return;
+    }
+    printf("Queue elements: ");
+    int i = queue->front;
+    do
+    {
+        printf("%d ", queue->items[i]);
+        i = (i + 1) % MAX_SIZE;
+    } while (i != (queue->rear + 1) % MAX_SIZE);
+    printf("\n");
+}
+// Define the mutex structure
+typedef struct
+{
+    bool flag;          // Mutex flag
+    int ownerID;        // Owner ID (if needed)
+    Queue blockedqueue; // Queue for blocked threads
+} Mutex;
+
+// Initialize the mutex
+void initMutex(Mutex *mutex)
+{
+    mutex->flag = false;                     // Mutex is initially unlocked
+    initializeQueue(&(mutex->blockedqueue)); // Initialize the blocked queue
+}
+
+// Wait operation on mutex
+void semWait(Mutex *mutex, int processID)
+{
+    if (!(mutex->flag))
+    {
+        mutex->flag = true;
+    }
+    else
+    {
+        if (size(&(mutex->blockedqueue)) < MAX_SIZE)
+        {
+            enqueue(&(mutex->blockedqueue), processID);
+        }
+        else
+        {
+            printf("Error: Blocked queue for mutex is full.\n");
+        }
+    }
+}
+
+// Signal operation on mutex
+void semSignal(Mutex *mutex)
+{
+    if (!isEmpty(&(mutex->blockedqueue)))
+    {
+        int unblockedProcess = dequeue(&(mutex->blockedqueue));
+        // Unblock the process (implementation dependent)
+        printf("Unblocked process with ID %d\n", unblockedProcess);
+        // Add unblocked process to the ready queue (implementation dependent)
+    }
+    else
+    {
+        mutex->flag = false;
+    }
+}
+
+Mutex userInput;
+Mutex userOutput;
+Mutex file;
+Queue Readyqueue1, Readyqueue2, Readyqueue3, Readyqueue4;
+Word Memory[MEMORY_SIZE];
 
 void createPCB(int startIndex, int processID, const char *state, int priority, int programCounter, int memoryLowerBound, int memoryUpperBound)
 {
@@ -90,7 +223,7 @@ int getInstructions(char filename[], int startIndex)
     {
         // printf("%s",line);
         // Assuming each line contains a name and a value separated by space
-        sscanf(line, "%19s %19s", Memory[i].name, Memory[i].value);
+        strcpy(Memory[i].name, line);
         i++;
     }
 
@@ -106,6 +239,16 @@ void init()
     createPCB(PCB1_START, 1, "Ready", 0, 1, 0, 6);
     createPCB(PCB2_START, 2, "Ready", 0, 1, 7, 13);
     createPCB(PCB3_START, 3, "Ready", 0, 1, 14, 22);
+    // Initialize the global mutex
+    initMutex(&userOutput);
+    initMutex(&userInput);
+    initMutex(&file);
+
+    // Initialize the 4 priority queues
+    initializeQueue(&(Readyqueue1));
+    initializeQueue(&(Readyqueue2));
+    initializeQueue(&Readyqueue3);
+    initializeQueue(&Readyqueue4);
 }
 
 int main()

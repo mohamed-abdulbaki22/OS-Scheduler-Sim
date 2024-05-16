@@ -6,7 +6,9 @@
 #define MAX_PRIORITY_LEVELS 4
 #define MAX_INSTRUCTIONS 10
 #define MAX_BLOCKED 10
-
+#define PCB1_START 30
+#define PCB2_START 36
+#define PCB3_START 42
 typedef struct
 {
     char name[20];
@@ -96,13 +98,19 @@ int getInstructions(char filename[], int startIndex)
     fclose(file);
     return i;
 }
-
-int main()
+void init()
 {
     int i = getInstructions("Program_1.txt", 0);
     int j = getInstructions("Program_2.txt", i);
     int k = getInstructions("Program_3.txt", j);
-    createPCB(30, 1, "Ready", 0, 1, 0, 10);
+    createPCB(PCB1_START, 1, "Ready", 0, 1, 0, 6);
+    createPCB(PCB2_START, 2, "Ready", 0, 1, 7, 13);
+    createPCB(PCB3_START, 3, "Ready", 0, 1, 14, 22);
+}
+
+int main()
+{
+    init();
     for (int i = 0; i < MEMORY_SIZE; i++)
     {
         if (strlen(Memory[i].name) > 0)

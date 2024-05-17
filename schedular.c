@@ -10,6 +10,13 @@
 #define PCB1_START 30
 #define PCB2_START 36
 #define PCB3_START 42
+#define A1_INDEX 50
+#define B1_INDEX 51
+#define A2_INDEX 52
+#define B2_INDEX 53
+#define A3_INDEX 54
+#define B3_INDEX 55
+static int time;
 
 typedef struct
 {
@@ -231,14 +238,67 @@ int getInstructions(char filename[], int startIndex)
     fclose(file);
     return i;
 }
+
+// printing numbers in a range
+void printFromTo(int a, int b)
+{
+    for (int i = a; i <= b; i++)
+    {
+        printf(" %d", i);
+    }
+}
+
+// assign a value to an index in memory
+void assign(int index, char method[])
+{
+    int tmp;
+    char valueStr[20];
+    if (method == "input")
+    {
+        printf("Please enter a value: ");
+        scanf("%d", &tmp);
+        sprintf(valueStr, "%d", tmp);
+        strcpy(Memory[index].value, valueStr);
+    }
+    printf("The value u inserted is %s", Memory[index].value);
+}
+void writeFile(char filename[], int index)
+{
+    FILE *fptr;
+
+    // Open a file in writing mode
+    fptr = fopen(filename, "w");
+
+    // Write some text to the file
+    fprintf(fptr, "%s", Memory[index].value);
+
+    // Close the file
+    fclose(fptr);
+}
+void readFile(char filename[], int index)
+{
+    FILE *fptr;
+
+    // Open a file in read mode
+    fptr = fopen(filename, "r");
+
+    // Read the content and store it inside myString
+    fgets(Memory[index].value, 20, fptr);
+
+    // Print the file content
+    printf("The data in the file is %s", Memory[index].value);
+
+    // Close the file
+    fclose(fptr);
+}
 void init()
 {
     int i = getInstructions("Program_1.txt", 0);
     int j = getInstructions("Program_2.txt", i);
     int k = getInstructions("Program_3.txt", j);
-    createPCB(PCB1_START, 1, "Ready", 0, 1, 0, 6);
-    createPCB(PCB2_START, 2, "Ready", 0, 1, 7, 13);
-    createPCB(PCB3_START, 3, "Ready", 0, 1, 14, 22);
+    createPCB(PCB1_START, 1, "Ready", 0, 0, 0, 6);
+    createPCB(PCB2_START, 2, "Ready", 0, i, 7, 13);
+    createPCB(PCB3_START, 3, "Ready", 0, j, 14, 22);
     // Initialize the global mutex
     initMutex(&userOutput);
     initMutex(&userInput);
@@ -249,6 +309,13 @@ void init()
     initializeQueue(&(Readyqueue2));
     initializeQueue(&Readyqueue3);
     initializeQueue(&Readyqueue4);
+
+    // initialize variable space
+    strcpy(Memory[A1_INDEX].name, "a1");
+    strcpy(Memory[B1_INDEX].name, "b1");
+    strcpy(Memory[A2_INDEX].name, "a2");
+    strcpy(Memory[B2_INDEX].name, "b2");
+    // strcpy(Memory[A_INDEX].value, "a3");
 }
 
 int main()
@@ -261,6 +328,16 @@ int main()
             printf("Memory[%d]: Name = %s, Value = %s\n", i, Memory[i].name, Memory[i].value);
         }
     }
-
+    assign(A1_INDEX, "input");
+    // printFromTo(2, 6);
+    // writeFile("meow.txt", B1_INDEX);
+    readFile("meow.txt",B1_INDEX);
+    for (int i = 0; i < MEMORY_SIZE; i++)
+    {
+        if (strlen(Memory[i].name) > 0)
+        {
+            printf("Memory[%d]: Name = %s, Value = %s\n", i, Memory[i].name, Memory[i].value);
+        }
+    }
     return 0;
 }

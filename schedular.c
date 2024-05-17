@@ -7,9 +7,9 @@
 #define MAX_INSTRUCTIONS 10
 #define MAX_SIZE 100
 #define MAX_BLOCKED 10
-#define PCB1_START 30
-#define PCB2_START 36
-#define PCB3_START 42
+#define PCB1_START 0
+#define PCB2_START 6
+#define PCB3_START 12
 #define A1_INDEX 50
 #define B1_INDEX 51
 #define A2_INDEX 52
@@ -17,6 +17,10 @@
 #define A3_INDEX 54
 #define B3_INDEX 55
 static int time;
+static int arrival1;
+static int arrival2;
+static int arrival3;
+static int nextMemIndex = 18;
 
 typedef struct
 {
@@ -291,14 +295,74 @@ void readFile(char filename[], int index)
     // Close the file
     fclose(fptr);
 }
+void setVariables(int start)
+{
+    for (int i = 0; i < 3; i++)
+    {
+        // printf("%s",line);
+        // Assuming each line contains a name and a value separated by space
+        switch (i)
+        {
+        case 0:
+            strcpy(Memory[start + i].name, "a");
+            break;
+        case 1:
+            strcpy(Memory[start + i].name, "b");
+            break;
+        case 2:
+            strcpy(Memory[start + i].name, "c");
+            break;
+        default:
+            break;
+        }
+    }
+}
+void initProcess(int processNum)
+{
+    int lower = nextMemIndex;
+    int upper = nextMemIndex;
+    int i;
+    int j;
+    switch (processNum)
+    {
+    case 1:
+        i = getInstructions("Program_1.txt", lower);
+        setVariables(i);
+        j = i + 3;
+        upper = j - 1;
+        createPCB(PCB1_START, 1, "Ready", 1, 0, lower, upper);
+        nextMemIndex = j;
+        break;
+    case 2:
+        i = getInstructions("Program_2.txt", lower);
+        setVariables(i);
+        j = i + 3;
+        upper = j - 1;
+        createPCB(PCB2_START, 2, "Ready", 1, 0, lower, upper);
+        nextMemIndex = j;
+        break;
+    case 3:
+        i = getInstructions("Program_3.txt", lower);
+        setVariables(i);
+        j = i + 3;
+        upper = j - 1;
+        createPCB(PCB3_START, 3, "Ready", 1, 0, lower, upper);
+        nextMemIndex = j;
+        break;
+    default:
+        printf("there is no such process");
+        break;
+    }
+    // int i = getInstructions("Program_1.txt", 0);
+    // int j = getInstructions("Program_2.txt", i);
+    // int k = getInstructions("Program_3.txt", j);
+}
 void init()
 {
-    int i = getInstructions("Program_1.txt", 0);
-    int j = getInstructions("Program_2.txt", i);
-    int k = getInstructions("Program_3.txt", j);
-    createPCB(PCB1_START, 1, "Ready", 0, 0, 0, 6);
-    createPCB(PCB2_START, 2, "Ready", 0, i, 7, 13);
-    createPCB(PCB3_START, 3, "Ready", 0, j, 14, 22);
+    // int i = getInstructions("Program_1.txt", 0);
+    // int j = getInstructions("Program_2.txt", i);
+    // int k = getInstructions("Program_3.txt", j);
+
     // Initialize the global mutex
     initMutex(&userOutput);
     initMutex(&userInput);
@@ -310,17 +374,52 @@ void init()
     initializeQueue(&Readyqueue3);
     initializeQueue(&Readyqueue4);
 
-    // initialize variable space
-    strcpy(Memory[A1_INDEX].name, "a1");
-    strcpy(Memory[B1_INDEX].name, "b1");
-    strcpy(Memory[A2_INDEX].name, "a2");
-    strcpy(Memory[B2_INDEX].name, "b2");
+    // // initialize variable space
+    // strcpy(Memory[A1_INDEX].name, "a1");
+    // strcpy(Memory[B1_INDEX].name, "b1");
+    // strcpy(Memory[A2_INDEX].name, "a2");
+    // strcpy(Memory[B2_INDEX].name, "b2");
     // strcpy(Memory[A_INDEX].value, "a3");
 }
-
+void executeProgram()
+{
+    for (time = 0; time < 100; time++)
+    {
+        if (time == arrival1)
+        {
+            initProcess(1);
+            enqueue(&Readyqueue1,1);
+        }
+        if (time == arrival2)
+        {
+            initProcess(2);
+            enqueue(&Readyqueue1,2);
+        }
+        if (time == arrival3)
+        {
+            initProcess(3);
+            enqueue(&Readyqueue1,3);
+        }
+    }
+    printf("program ended");
+}
 int main()
 {
     init();
+
+    for (int i = 1; i <= 3; i++)
+    {
+        printf("arrival time of: %d\n", i);
+        if (i == 1)
+            scanf("%d", &arrival1);
+        else if (i == 2)
+            scanf("%d", &arrival2);
+        else if (i == 3)
+            scanf("%d", &arrival3);
+    }
+
+    executeProgram();
+
     for (int i = 0; i < MEMORY_SIZE; i++)
     {
         if (strlen(Memory[i].name) > 0)
@@ -328,16 +427,16 @@ int main()
             printf("Memory[%d]: Name = %s, Value = %s\n", i, Memory[i].name, Memory[i].value);
         }
     }
-    assign(A1_INDEX, "input");
+    // assign(A1_INDEX, "input");
     // printFromTo(2, 6);
     // writeFile("meow.txt", B1_INDEX);
-    readFile("meow.txt",B1_INDEX);
-    for (int i = 0; i < MEMORY_SIZE; i++)
-    {
-        if (strlen(Memory[i].name) > 0)
-        {
-            printf("Memory[%d]: Name = %s, Value = %s\n", i, Memory[i].name, Memory[i].value);
-        }
-    }
+    // readFile("meow.txt", B1_INDEX);
+    // for (int i = 0; i < MEMORY_SIZE; i++)
+    // {
+    //     if (strlen(Memory[i].name) > 0)
+    //     {
+    //         printf("Memory[%d]: Name = %s, Value = %s\n", i, Memory[i].name, Memory[i].value);
+    //     }
+    // }
     return 0;
 }

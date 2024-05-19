@@ -174,10 +174,6 @@ int MutexOwner(Mutex *mutex)
     return mutex->ownerID;
 }
 
-int MutexOwner(Mutex *mutex) {
-    return mutex->ownerID;
-}
-
 // Wait operation on mutex
 // Wait operation on mutex
 void semWait(Mutex *mutex, Process process)
@@ -188,13 +184,8 @@ void semWait(Mutex *mutex, Process process)
     printf("\n \n I am inside the SimWait w 7yat omak \n \n");
     if (mutex->flag)
     {
-<<<<<<< HEAD
         mutex->flag = false;
         mutex->ownerID = process.processID;
-=======
-        mutex->flag = true;
-        mutex->ownerID = processID;
->>>>>>> 07fee24808b1390b1ea6c1abedc288bbf9970abc
     }
     else
     {
@@ -247,16 +238,8 @@ void semSignal(Mutex *mutex)
         printf("Unblocked process with ID %d\n", unblockedProcess.processID);
         // Add unblocked process to the ready queue (implementation dependent)
     }
-<<<<<<< HEAD
     mutex->flag = true;
     mutex->ownerID = -1;
-=======
-    else
-    {
-        mutex->flag = false;
-        mutex->ownerID=-1;
-    }
->>>>>>> 07fee24808b1390b1ea6c1abedc288bbf9970abc
 }
 Mutex userInput;
 Mutex userOutput;
@@ -305,11 +288,7 @@ void createPCB(int startIndex, int processID, const char *state, int priority, i
     sprintf(valueStr, "%d", memoryUpperBound);
     strcpy(Memory[startIndex + 5].value, valueStr);
 }
-<<<<<<< HEAD
 
-=======
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
->>>>>>> 07fee24808b1390b1ea6c1abedc288bbf9970abc
 int getInstructions(char filename[], int startIndex)
 {
     FILE *file;
@@ -337,7 +316,7 @@ int getInstructions(char filename[], int startIndex)
     fclose(file);
     return i;
 }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // printing numbers in a range
 void printFromTo(int a, int b)
 {
@@ -475,7 +454,6 @@ void initProcess(int processNum)
         printf("there is no such process");
         break;
     }
-<<<<<<< HEAD
 }
 void print(char toBePrinted[])
 {
@@ -552,8 +530,6 @@ void updateProgramCounter(int processId)
     default:
         break;
     }
-=======
->>>>>>> 07fee24808b1390b1ea6c1abedc288bbf9970abc
 }
 void init()
 {
@@ -610,22 +586,14 @@ void executeProgram()
         if (time == arrival1)
         {
             initProcess(1);
-<<<<<<< HEAD
             enqueue(&Readyqueue1, process1);
             printf("Process1 arrived for execution\n");
-=======
-            enqueue(&Readyqueue1, 1);
->>>>>>> 07fee24808b1390b1ea6c1abedc288bbf9970abc
         }
         if (time == arrival2)
         {
             initProcess(2);
-<<<<<<< HEAD
             enqueue(&Readyqueue1, process2);
             printf("Process2 arrived for execution\n");
-=======
-            enqueue(&Readyqueue1, 2);
->>>>>>> 07fee24808b1390b1ea6c1abedc288bbf9970abc
         }
         // if (time == arrival3)
         // {
@@ -635,7 +603,6 @@ void executeProgram()
         // }
         if (!isEmpty(&Readyqueue1))
         {
-<<<<<<< HEAD
             Process currProcess = peek(&Readyqueue1);
             char *instruction = getCurrInstruction(getId(currProcess));
             updateInstructionsLeft(getId(currProcess));
@@ -786,99 +753,7 @@ void executeInstruction(Process p, char instruction[])
     {
         printf("Unknown instruction: %s\n", instruction);
     }
-=======
-            initProcess(3);
-            enqueue(&Readyqueue1, 3);
-        }
-        int currProcess = -1;
-        if(!(isEmpty(&Readyqueue1))){
-            currProcess = dequeue(&Readyqueue1);
-        }
-        if(!(isEmpty(&Readyqueue2))){
-            currProcess=dequeue(&Readyqueue2);
-            
-        }
-        if(!(isEmpty(&Readyqueue3))){
-            currProcess=dequeue(&Readyqueue3);
-        }
-        if(!(isEmpty(&Readyqueue4))){
-            currProcess=dequeue(&Readyqueue4);
-        }
-        if (currProcess != -1)
-        {
-            int pcbIndex = (currProcess - 1) * 6;
-            int programCounter = atoi(Memory[pcbIndex + 3].value);
-            int memoryLowerBound = atoi(Memory[pcbIndex + 4].value);
-            int memoryUpperBound = atoi(Memory[pcbIndex + 5].value);
-
-            if (programCounter + memoryLowerBound <= memoryUpperBound)
-            {
-                executeInstruction(Memory[programCounter + memoryLowerBound].name);
-                programCounter++;
-                sprintf(Memory[pcbIndex + 3].value, "%d", programCounter);
-                enqueue(&Readyqueue1, currProcess); // Re-enqueue the process after execution
-            }
-        }
-    }
-    
-    printf("program ended\n");
->>>>>>> 07fee24808b1390b1ea6c1abedc288bbf9970abc
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void executeInstruction(char instruction[])
-{
-    char command[20];
-    sscanf(instruction, "%s", command);
-
-    if (strcmp(command, "PRINT") == 0)
-    {
-        semWait(&userOutput,1);         //1 is just for now 
-        if (MutexOwner(&userOutput) == 1) {
-            int start, end;
-            sscanf(instruction, "%*s %d %d", &start, &end);
-            printFromTo(start, end);
-            semSignal(&userOutput) ;
-        }  
-    }
-    else if (strcmp(command, "ASSIGN") == 0)
-    {
-        semWait(&userInput,1);         //1 is just for now
-        if (MutexOwner(&userInput) == 1) { 
-            int index;
-            char method[20];
-            sscanf(instruction, "%*s %d %s", &index, method);
-            assign(index, method);
-            semSignal(&userInput)  ;
-        }       
-    }
-    else if (strcmp(command, "WRITEFILE") == 0)
-    {
-        semWait(&file,1);         //1 is just for now
-        if (MutexOwner(&file) == 1) { 
-            char filename[20];
-            int index;
-            sscanf(instruction, "%*s %s %d", filename, &index);
-            writeFile(filename, index);
-            semSignal(&file) ;     
-        }   
-    }
-    else if (strcmp(command, "READFILE") == 0)
-    {
-        semWait(&file,1);         //1 is just for now 
-        if (MutexOwner(&file) == 1) {
-            char filename[20];
-            int index;
-            sscanf(instruction, "%*s %s %d", filename, &index);
-            readFile(filename, index);
-            semSignal(&file) ; 
-        }
-    }
-    else
-    {
-        printf("Unknown instruction: %s\n", instruction);
-    }
-}
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int main()
 {
     init();
@@ -936,10 +811,5 @@ int main()
     //         printf("Memory[%d]: Name = %s, Value = %s\n", i, Memory[i].name, Memory[i].value);
     //     }
     // }
-<<<<<<< HEAD
-    // return 0;
+    return 0;
 }
-=======
- return 0;
-}
->>>>>>> 07fee24808b1390b1ea6c1abedc288bbf9970abc

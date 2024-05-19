@@ -1,3 +1,9 @@
+// change the queue to be queue of processes
+// simwait changed it so the blocked queue store the blocked process through checking ID( id=1:process1, id=2:process2, id=3:process3)
+// simSignal
+// programExecute
+// in programInstruction simsignal and simwait is inserted but how will I know the process that is currently executing (ownerID)
+
 #include <stdio.h>
 #include <string.h>
 
@@ -11,11 +17,12 @@
 #define PCB2_START 6
 #define PCB3_START 12
 #define A1_INDEX 50
-#define B1_INDEX 51
-#define A2_INDEX 52
-#define B2_INDEX 53
-#define A3_INDEX 54
-#define B3_INDEX 55
+// #define B1_INDEX 51
+// #define A2_INDEX 52
+// #define B2_INDEX 53
+// #define A3_INDEX 54
+// #define B3_INDEX 55
+static int Quantum;
 static int time;
 static int arrival1;
 static int arrival2;
@@ -38,6 +45,15 @@ typedef struct
     int memoryUpperBound;
 } PCB;
 
+typedef struct
+{
+    int processID;
+    char state[10];
+    int priority;
+    int programCounter;
+    int instructionsLeft;
+} Process;
+
 typedef enum
 {
     false = 0,
@@ -46,7 +62,7 @@ typedef enum
 
 typedef struct
 {
-    int items[MAX_SIZE];
+    Process items[MAX_SIZE];
     int front;
     int rear;
     unsigned int size;
@@ -76,7 +92,7 @@ int size(Queue *queue)
 }
 
 // Enqueue an element into the queue
-void enqueue(Queue *queue, int value)
+void enqueue(Queue *queue, Process value)
 {
     if (isFull(queue))
     {
@@ -89,14 +105,16 @@ void enqueue(Queue *queue, int value)
 }
 
 // Dequeue an element from the queue
-int dequeue(Queue *queue)
+Process dequeue(Queue *queue)
 {
+    Process emptyProcess = {0, "", 0, 0, 0}; // Default empty process
+
     if (isEmpty(queue))
     {
         printf("Queue is empty. Cannot dequeue.\n");
-        return -1;
+        return emptyProcess;
     }
-    int value = queue->items[queue->front];
+    Process value = queue->items[queue->front];
     queue->front = (queue->front + 1) % MAX_SIZE;
     queue->size--;
     return value;
@@ -114,7 +132,7 @@ void display(Queue *queue)
     int i = queue->front;
     do
     {
-        printf("%d ", queue->items[i]);
+        printf("%d ", queue->items[i].processID); // Display process IDs
         i = (i + 1) % MAX_SIZE;
     } while (i != (queue->rear + 1) % MAX_SIZE);
     printf("\n");
@@ -130,22 +148,50 @@ typedef struct
 // Initialize the mutex
 void initMutex(Mutex *mutex)
 {
-    mutex->flag = false;                     // Mutex is initially unlocked
+    mutex->flag = true;                      // Mutex is initially unlocked
     initializeQueue(&(mutex->blockedqueue)); // Initialize the blocked queue
+    mutex->ownerID = -1;                     // till a process owns the Mutex
+}
+
+int MutexOwner(Mutex *mutex)
+{
+    return mutex->ownerID;
 }
 
 // Wait operation on mutex
-void semWait(Mutex *mutex, int processID)
+void semWait(Mutex *mutex, Process process)
 {
-    if (!(mutex->flag))
+    extern Process process1, process2, process3; // Declare external variables
+    if (mutex->flag)
     {
-        mutex->flag = true;
+        mutex->flag = false;
+        mutex->ownerID = process.processID;
     }
     else
     {
         if (size(&(mutex->blockedqueue)) < MAX_SIZE)
         {
-            enqueue(&(mutex->blockedqueue), processID);
+            if (process.processID == 1)
+            {
+                // Process has been blocked
+                strcpy(process1.state, "blocked");
+                enqueue(&(mutex->blockedqueue), process1);
+                printf("process1 is blocked");
+            }
+            if (process.processID == 2)
+            {
+                // Process has been blocked
+                strcpy(process2.state, "blocked");
+                enqueue(&(mutex->blockedqueue), process2);
+                printf("process2 is blocked");
+            }
+            if (process.processID == 3)
+            {
+                // Process has been blocked
+                strcpy(process3.state, "blocked");
+                enqueue(&(mutex->blockedqueue), process3);
+                printf("process3 is blocked");
+            }
         }
         else
         {
@@ -157,24 +203,30 @@ void semWait(Mutex *mutex, int processID)
 // Signal operation on mutex
 void semSignal(Mutex *mutex)
 {
+    extern Queue Readyqueue1; // Declare external variable
     if (!isEmpty(&(mutex->blockedqueue)))
     {
-        int unblockedProcess = dequeue(&(mutex->blockedqueue));
+        Process unblockedProcess = dequeue(&(mutex->blockedqueue));
+        // Process has is ready
+        strcpy(unblockedProcess.state, "Ready");
+        enqueue(&Readyqueue1, unblockedProcess);
         // Unblock the process (implementation dependent)
         printf("Unblocked process with ID %d\n", unblockedProcess);
         // Add unblocked process to the ready queue (implementation dependent)
     }
-    else
+    if (isEmpty(&(mutex->blockedqueue)))
     {
-        mutex->flag = false;
+
+        mutex->flag = true;
+        mutex->ownerID = -1;
     }
 }
-
 Mutex userInput;
 Mutex userOutput;
 Mutex file;
-Queue Readyqueue1, Readyqueue2, Readyqueue3, Readyqueue4;
+Queue Readyqueue1;
 Word Memory[MEMORY_SIZE];
+Process process1, process2, process3;
 
 void createPCB(int startIndex, int processID, const char *state, int priority, int programCounter, int memoryLowerBound, int memoryUpperBound)
 {
@@ -331,6 +383,11 @@ void initProcess(int processNum)
         j = i + 3;
         upper = j - 1;
         createPCB(PCB1_START, 1, "Ready", 1, 0, lower, upper);
+        process1.processID = 1;
+        strcpy(process1.state, "Ready");
+        process1.priority = 1;
+        process1.programCounter = 0;
+        process1.instructionsLeft = i - lower;
         nextMemIndex = j;
         break;
     case 2:
@@ -339,6 +396,13 @@ void initProcess(int processNum)
         j = i + 3;
         upper = j - 1;
         createPCB(PCB2_START, 2, "Ready", 1, 0, lower, upper);
+        process2.processID = 2;
+        strcpy(process2.state, "Ready");
+        process2.priority = 1;
+        process2.programCounter = 0;
+        printf("\n\n no. of instr. is %d\n\n", (i - lower));
+
+        process2.instructionsLeft = i - lower;
         nextMemIndex = j;
         break;
     case 3:
@@ -347,32 +411,105 @@ void initProcess(int processNum)
         j = i + 3;
         upper = j - 1;
         createPCB(PCB3_START, 3, "Ready", 1, 0, lower, upper);
+        process3.processID = 3;
+        strcpy(process3.state, "Ready");
+        process3.priority = 1;
+        process3.programCounter = 0;
+        // a = i - lower;
+        printf("no. of instr. is %d", (i - lower));
+        process3.instructionsLeft = i - lower;
         nextMemIndex = j;
         break;
     default:
         printf("there is no such process");
         break;
     }
-    // int i = getInstructions("Program_1.txt", 0);
-    // int j = getInstructions("Program_2.txt", i);
-    // int k = getInstructions("Program_3.txt", j);
+}
+void print(char toBePrinted[])
+{
+    printf("%s", toBePrinted);
+}
+
+int getId(Process p)
+{
+    return p.processID;
+}
+
+void updateState(int processId, char state[])
+{
+    switch (processId)
+    {
+    case 1:
+        strcpy(process1.state, state);
+        strcpy(Memory[PCB1_START + 1].value, state);
+        break;
+    case 2:
+        strcpy(process2.state, state);
+        strcpy(Memory[PCB2_START + 1].value, state);
+        break;
+    case 3:
+        strcpy(process3.state, state);
+        strcpy(Memory[PCB3_START + 1].value, state);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void updateInstructionsLeft(int processId)
+{
+    switch (processId)
+    {
+    case 1:
+        process1.instructionsLeft--;
+        break;
+    case 2:
+        process2.instructionsLeft--;
+        break;
+    case 3:
+        process3.instructionsLeft--;
+        break;
+
+    default:
+        break;
+    }
+}
+
+void updateProgramCounter(int processId)
+{
+    char valueStr[20];
+    switch (processId)
+    {
+    case 1:
+        process1.programCounter++;
+        sprintf(valueStr, "%d", process1.programCounter);
+        strcpy(Memory[PCB1_START + 3].value, valueStr);
+        break;
+    case 2:
+        process2.programCounter++;
+        sprintf(valueStr, "%d", process2.programCounter);
+        strcpy(Memory[PCB2_START + 3].value, valueStr);
+        break;
+    case 3:
+        process3.programCounter++;
+        sprintf(valueStr, "%d", process3.programCounter);
+        strcpy(Memory[PCB3_START + 3].value, valueStr);
+        break;
+
+    default:
+        break;
+    }
 }
 void init()
 {
-    // int i = getInstructions("Program_1.txt", 0);
-    // int j = getInstructions("Program_2.txt", i);
-    // int k = getInstructions("Program_3.txt", j);
-
     // Initialize the global mutex
     initMutex(&userOutput);
     initMutex(&userInput);
     initMutex(&file);
 
     // Initialize the 4 priority queues
-    initializeQueue(&(Readyqueue1));
-    initializeQueue(&(Readyqueue2));
-    initializeQueue(&Readyqueue3);
-    initializeQueue(&Readyqueue4);
+    initializeQueue(&Readyqueue1);
 
     // // initialize variable space
     // strcpy(Memory[A1_INDEX].name, "a1");
@@ -383,39 +520,165 @@ void init()
 }
 void executeProgram()
 {
+    int j = 0;
     for (time = 0; time < 100; time++)
     {
+        printf("______________________________Instruction Cycle %d_______________________________\n",time);
         if (time == arrival1)
         {
             initProcess(1);
-            enqueue(&Readyqueue1,1);
+            enqueue(&Readyqueue1, process1);
+            printf("Process1 arrived for execution\n");
         }
         if (time == arrival2)
         {
             initProcess(2);
-            enqueue(&Readyqueue1,2);
+            enqueue(&Readyqueue1, process2);
+            printf("Process2 arrived for execution\n");
         }
         if (time == arrival3)
         {
             initProcess(3);
-            enqueue(&Readyqueue1,3);
+            enqueue(&Readyqueue1, process3);
+            printf("Process3 arrived for execution\n");
+        }
+
+        // if (!(isEmpty(&Readyqueue1)))
+        // {
+        //     Process currProcess = dequeue(&Readyqueue1);
+        //     if (currProcess.programCounter < Quantum - 1)
+        //     {
+        //         int test[] = {1, 4};
+        //         executeInstruction("printFromTo 4 9");
+        //         currProcess.instructionsLeft--;
+        //         currProcess.programCounter++;
+        //     }
+        //     else if (currProcess.instructionsLeft <= 0)
+        //     {
+        //         // Process has finished execution
+        //         // strcpy(currProcess.state, "Terminated");
+        //         updateState(getId(currProcess), "Terminated");
+        //     }
+        //     else
+        //     {
+        //         enqueue(&Readyqueue1, currProcess);
+        //     }
+        // }
+
+    }
+
+    printf("program ended\n");
+}
+void executeInstruction(char instruction[])
+{
+    char command[20];
+    sscanf(instruction, "%s", command);
+
+    if (strcmp(command, "printFromTo") == 0)
+    {
+        printf("\n \n test \n \n");
+        int start, end;
+        // start=variable[0];
+        // end=variable[1];
+        sscanf(instruction, "%*s %d %d", &start, &end);
+        printFromTo(start, end);
+        printf("\n \n end test \n \n");
+    }
+
+    else if (strcmp(command, "assign") == 0)
+    {
+        int index;
+        char method[20];
+        sscanf(instruction, "%*s %d %s", &index, method);
+        assign(index, method);
+    }
+
+    else if (strcmp(command, "writeFile") == 0)
+    {
+        char filename[20];
+        int index;
+        sscanf(instruction, "%*s %s %d", filename, &index);
+        writeFile(filename, index);
+    }
+
+    else if (strcmp(command, "readFile") == 0)
+    {
+        char filename[20];
+        int index;
+        sscanf(instruction, "%*s %s %d", filename, &index);
+        readFile(filename, index);
+    }
+
+    else if (strcmp(command, "semWait") == 0)
+    {
+        char mutexName[20];
+        sscanf(instruction, "%*s %s", mutexName);
+        if (strcmp(mutexName, "userInput") == 0)
+        {
+            // semWait(&userInput, /* provide the current process here */);
+        }
+        else if (strcmp(mutexName, "file") == 0)
+        {
+            // semWait(&file, /* provide the current process here */);
+        }
+        else if (strcmp(mutexName, "userOutput") == 0)
+        {
+            // semWait(&userOutput, /* provide the current process here */);
+        }
+        else
+        {
+            printf("Unknown mutex: %s\n", mutexName);
         }
     }
-    printf("program ended");
+
+    else if (strcmp(command, "semSignal") == 0)
+    {
+        char mutexName[20];
+        sscanf(instruction, "%*s %s", mutexName);
+        if (strcmp(mutexName, "userInput") == 0)
+        {
+            semSignal(&userInput);
+        }
+        else if (strcmp(mutexName, "file") == 0)
+        {
+            semSignal(&file);
+        }
+        else if (strcmp(mutexName, "userOutput") == 0)
+        {
+            semSignal(&userOutput);
+        }
+        else
+        {
+            printf("Unknown mutex: %s\n", mutexName);
+        }
+    }
+
+    else
+    {
+        printf("Unknown instruction: %s\n", instruction);
+    }
 }
 int main()
 {
     init();
 
-    for (int i = 1; i <= 3; i++)
+    for (int i = 1; i <= 4; i++)
     {
-        printf("arrival time of: %d\n", i);
-        if (i == 1)
-            scanf("%d", &arrival1);
-        else if (i == 2)
-            scanf("%d", &arrival2);
-        else if (i == 3)
-            scanf("%d", &arrival3);
+        if (i < 4)
+        {
+            printf("arrival time of process %d\n", i);
+            if (i == 1)
+                scanf("%d", &arrival1);
+            else if (i == 2)
+                scanf("%d", &arrival2);
+            else if (i == 3)
+                scanf("%d", &arrival3);
+        }
+        else
+        {
+            printf("Enter The RR Quantum\n");
+            scanf("%d", &Quantum);
+        }
     }
 
     executeProgram();
@@ -427,16 +690,26 @@ int main()
             printf("Memory[%d]: Name = %s, Value = %s\n", i, Memory[i].name, Memory[i].value);
         }
     }
+    updateProgramCounter(2);
+    updateState(2,"Blocked");
+    updateInstructionsLeft(2);  
+    display(&Readyqueue1);
+    printf("Process ID: %d\n", process2.processID);
+    printf("State: %s\n", process2.state);
+    printf("Priority: %d\n", process2.priority);
+    printf("Program Counter: %d\n", process2.programCounter);
+    printf("Instructions Left: %d\n", process2.instructionsLeft);
     // assign(A1_INDEX, "input");
     // printFromTo(2, 6);
     // writeFile("meow.txt", B1_INDEX);
     // readFile("meow.txt", B1_INDEX);
-    // for (int i = 0; i < MEMORY_SIZE; i++)
-    // {
-    //     if (strlen(Memory[i].name) > 0)
-    //     {
-    //         printf("Memory[%d]: Name = %s, Value = %s\n", i, Memory[i].name, Memory[i].value);
-    //     }
-    // }
+
+    for (int i = 0; i < MEMORY_SIZE; i++)
+    {
+        if (strlen(Memory[i].name) > 0)
+        {
+            printf("Memory[%d]: Name = %s, Value = %s\n", i, Memory[i].name, Memory[i].value);
+        }
+    }
     return 0;
 }

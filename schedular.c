@@ -23,6 +23,7 @@
 // #define A3_INDEX 54
 // #define B3_INDEX 55
 static int Quantum;
+static int cyclesLeft;
 static int time;
 static int arrival1;
 static int arrival2;
@@ -52,6 +53,8 @@ typedef struct
     int priority;
     int programCounter;
     int instructionsLeft;
+    int memoryLowerBound;
+    int memoryUpperBound;
 } Process;
 
 typedef enum
@@ -120,6 +123,19 @@ Process dequeue(Queue *queue)
     return value;
 }
 
+// Peek at the front element of the queue without removing it
+Process peek(Queue *queue)
+{
+    Process emptyProcess = {0, "", 0, 0, 0}; // Default empty process
+
+    if (isEmpty(queue))
+    {
+        printf("Queue is empty. Cannot peek.\n");
+        return emptyProcess;
+    }
+    return queue->items[queue->front];
+}
+
 // Display the queue
 void display(Queue *queue)
 {
@@ -159,9 +175,13 @@ int MutexOwner(Mutex *mutex)
 }
 
 // Wait operation on mutex
+// Wait operation on mutex
 void semWait(Mutex *mutex, Process process)
 {
     extern Process process1, process2, process3; // Declare external variables
+    extern Queue Readyqueue1;
+    sleep(2);
+    printf("\n \n I am inside the SimWait w 7yat omak \n \n");
     if (mutex->flag)
     {
         mutex->flag = false;
@@ -171,25 +191,29 @@ void semWait(Mutex *mutex, Process process)
     {
         if (size(&(mutex->blockedqueue)) < MAX_SIZE)
         {
+            cyclesLeft = Quantum;
             if (process.processID == 1)
             {
                 // Process has been blocked
-                strcpy(process1.state, "blocked");
+                updateState(process1.processID, "Blocked");
                 enqueue(&(mutex->blockedqueue), process1);
+                dequeue(&Readyqueue1);
                 printf("process1 is blocked");
             }
             if (process.processID == 2)
             {
                 // Process has been blocked
-                strcpy(process2.state, "blocked");
+                updateState(process2.processID, "Blocked");
                 enqueue(&(mutex->blockedqueue), process2);
+                dequeue(&Readyqueue1);
                 printf("process2 is blocked");
             }
             if (process.processID == 3)
             {
                 // Process has been blocked
-                strcpy(process3.state, "blocked");
+                updateState(process3.processID, "Blocked");
                 enqueue(&(mutex->blockedqueue), process3);
+                dequeue(&Readyqueue1);
                 printf("process3 is blocked");
             }
         }
@@ -199,27 +223,23 @@ void semWait(Mutex *mutex, Process process)
         }
     }
 }
-
 // Signal operation on mutex
 void semSignal(Mutex *mutex)
 {
     extern Queue Readyqueue1; // Declare external variable
+    printf("\n \n I am inside the SimSignal Abos reglak \n \n");
     if (!isEmpty(&(mutex->blockedqueue)))
     {
         Process unblockedProcess = dequeue(&(mutex->blockedqueue));
         // Process has is ready
-        strcpy(unblockedProcess.state, "Ready");
+        updateState(unblockedProcess.processID, "Ready");
         enqueue(&Readyqueue1, unblockedProcess);
         // Unblock the process (implementation dependent)
-        printf("Unblocked process with ID %d\n", unblockedProcess);
+        printf("Unblocked process with ID %d\n", unblockedProcess.processID);
         // Add unblocked process to the ready queue (implementation dependent)
     }
-    if (isEmpty(&(mutex->blockedqueue)))
-    {
-
-        mutex->flag = true;
-        mutex->ownerID = -1;
-    }
+    mutex->flag = true;
+    mutex->ownerID = -1;
 }
 Mutex userInput;
 Mutex userOutput;
@@ -227,6 +247,7 @@ Mutex file;
 Queue Readyqueue1;
 Word Memory[MEMORY_SIZE];
 Process process1, process2, process3;
+Process *current = &process1;
 
 void createPCB(int startIndex, int processID, const char *state, int priority, int programCounter, int memoryLowerBound, int memoryUpperBound)
 {
@@ -267,6 +288,7 @@ void createPCB(int startIndex, int processID, const char *state, int priority, i
     sprintf(valueStr, "%d", memoryUpperBound);
     strcpy(Memory[startIndex + 5].value, valueStr);
 }
+
 int getInstructions(char filename[], int startIndex)
 {
     FILE *file;
@@ -298,10 +320,12 @@ int getInstructions(char filename[], int startIndex)
 // printing numbers in a range
 void printFromTo(int a, int b)
 {
+    printf("printed range\n");
     for (int i = a; i <= b; i++)
     {
         printf(" %d", i);
     }
+    printf("\n\n");
 }
 
 // assign a value to an index in memory
@@ -309,7 +333,7 @@ void assign(int index, char method[])
 {
     int tmp;
     char valueStr[20];
-    if (method == "input")
+    if (strcmp(method, "input") == 0)
     {
         printf("Please enter a value: ");
         scanf("%d", &tmp);
@@ -318,6 +342,7 @@ void assign(int index, char method[])
     }
     printf("The value u inserted is %s", Memory[index].value);
 }
+
 void writeFile(char filename[], int index)
 {
     FILE *fptr;
@@ -388,6 +413,8 @@ void initProcess(int processNum)
         process1.priority = 1;
         process1.programCounter = 0;
         process1.instructionsLeft = i - lower;
+        process1.memoryLowerBound = lower;
+        process1.memoryUpperBound = upper;
         nextMemIndex = j;
         break;
     case 2:
@@ -401,8 +428,9 @@ void initProcess(int processNum)
         process2.priority = 1;
         process2.programCounter = 0;
         printf("\n\n no. of instr. is %d\n\n", (i - lower));
-
         process2.instructionsLeft = i - lower;
+        process2.memoryLowerBound = lower;
+        process2.memoryUpperBound = upper;
         nextMemIndex = j;
         break;
     case 3:
@@ -418,6 +446,8 @@ void initProcess(int processNum)
         // a = i - lower;
         printf("no. of instr. is %d", (i - lower));
         process3.instructionsLeft = i - lower;
+        process3.memoryLowerBound = lower;
+        process3.memoryUpperBound = upper;
         nextMemIndex = j;
         break;
     default:
@@ -512,18 +542,47 @@ void init()
     initializeQueue(&Readyqueue1);
 
     // // initialize variable space
-    // strcpy(Memory[A1_INDEX].name, "a1");
-    // strcpy(Memory[B1_INDEX].name, "b1");
-    // strcpy(Memory[A2_INDEX].name, "a2");
-    // strcpy(Memory[B2_INDEX].name, "b2");
-    // strcpy(Memory[A_INDEX].value, "a3");
+}
+
+char *getCurrInstruction(int index)
+{
+    // Allocate memory for the string
+    char *str = (char *)malloc(20 * sizeof(char));
+    if (str == NULL)
+    {
+        printf("Memory allocation failed\n");
+        return NULL;
+    }
+    switch (index)
+    {
+    case 1:
+        printf("The current instruction %d\n", process1.programCounter);
+        strcpy(str, Memory[process1.memoryLowerBound + process1.programCounter].name);
+        printf("%s a7a\n", str);
+        break;
+    case 2:
+        printf("The current instruction %d\n", process2.programCounter);
+        strcpy(str, Memory[process2.memoryLowerBound + process2.programCounter].name);
+        printf("%s a7a\n", str);
+        break;
+    case 3:
+        printf("The current instruction %d\n", process3.programCounter);
+        strcpy(str, Memory[process3.memoryLowerBound + process3.programCounter].name);
+        printf("%s a7a\n", str);
+        break;    
+    default:
+        break;
+    }
+    // Copy a string into the allocated memory
+
+    return str;
 }
 void executeProgram()
 {
-    int j = 0;
-    for (time = 0; time < 100; time++)
+    cyclesLeft = Quantum;
+    for (time = 0; time < 20; time++)
     {
-        printf("______________________________Instruction Cycle %d_______________________________\n",time);
+        printf("---------------------------Instruction Cycle %d------------------------------------\n", time);
         if (time == arrival1)
         {
             initProcess(1);
@@ -536,13 +595,37 @@ void executeProgram()
             enqueue(&Readyqueue1, process2);
             printf("Process2 arrived for execution\n");
         }
-        if (time == arrival3)
+        // if (time == arrival3)
+        // {
+        //     initProcess(3);
+        //     enqueue(&Readyqueue1, process3);
+        //     printf("Process3 arrived for execution\n");
+        // }
+        if (!isEmpty(&Readyqueue1))
         {
-            initProcess(3);
-            enqueue(&Readyqueue1, process3);
-            printf("Process3 arrived for execution\n");
+            Process currProcess = peek(&Readyqueue1);
+            char *instruction = getCurrInstruction(getId(currProcess));
+            updateInstructionsLeft(getId(currProcess));
+            updateProgramCounter(getId(currProcess));
+            cyclesLeft--;
+            printf("(process %d)", currProcess.processID);
+            executeInstruction(currProcess, instruction);
+            free(instruction);
+            if (currProcess.instructionsLeft <= 0)
+            {
+                updateState(currProcess.processID, "Terminated");
+                printf("\nprocess Terminated \n\n");
+                dequeue(&Readyqueue1);
+                display(&Readyqueue1);
+            }
+            if (cyclesLeft == 0 && currProcess.state != "Terminated")
+            {
+                printf("-----------process preampted----------\n");
+                Process p = dequeue(&Readyqueue1);
+                enqueue(&Readyqueue1, p);
+                cyclesLeft = Quantum;
+            }
         }
-
         // if (!(isEmpty(&Readyqueue1)))
         // {
         //     Process currProcess = dequeue(&Readyqueue1);
@@ -564,32 +647,45 @@ void executeProgram()
         //         enqueue(&Readyqueue1, currProcess);
         //     }
         // }
-
     }
 
     printf("program ended\n");
 }
-void executeInstruction(char instruction[])
+void executeInstruction(Process p, char instruction[])
 {
     char command[20];
     sscanf(instruction, "%s", command);
 
     if (strcmp(command, "printFromTo") == 0)
     {
-        printf("\n \n test \n \n");
-        int start, end;
-        // start=variable[0];
-        // end=variable[1];
-        sscanf(instruction, "%*s %d %d", &start, &end);
+        printf("\n \n test \n \n %d", p.processID);
+        char a[2], b[2];
+        int start;
+        int end;
+        printf("ID \n \n ");
+        sscanf(instruction, "printFromTo %s %s", a, b);
+        if (strcmp(a, "a") == 0)
+            start = p.memoryUpperBound - 2;
+        // printf("Mashy el7al %d", start);
+        if (strcmp(b, "b") == 0)
+            end = p.memoryUpperBound - 1;
+        start = atoi(Memory[start].value);
+        end = atoi(Memory[end].value);
         printFromTo(start, end);
-        printf("\n \n end test \n \n");
+        // printf("\n \n end test \n \n");
     }
 
     else if (strcmp(command, "assign") == 0)
     {
-        int index;
+        char var[1];
         char method[20];
-        sscanf(instruction, "%*s %d %s", &index, method);
+        int index = 0;
+        int matched = sscanf(instruction, "assign %s %s", var, method);
+        if (strcmp(var, "a") == 0)
+            index = p.memoryUpperBound - 2;
+        else
+            index = p.memoryUpperBound - 1;
+        printf("\n\n\ndata assigned to address %d for process %d\n\n\n", index, p.processID);
         assign(index, method);
     }
 
@@ -615,15 +711,15 @@ void executeInstruction(char instruction[])
         sscanf(instruction, "%*s %s", mutexName);
         if (strcmp(mutexName, "userInput") == 0)
         {
-            // semWait(&userInput, /* provide the current process here */);
+            semWait(&userInput, p);
         }
         else if (strcmp(mutexName, "file") == 0)
         {
-            // semWait(&file, /* provide the current process here */);
+            semWait(&file, p);
         }
         else if (strcmp(mutexName, "userOutput") == 0)
         {
-            // semWait(&userOutput, /* provide the current process here */);
+            semWait(&userOutput, p);
         }
         else
         {
@@ -690,26 +786,30 @@ int main()
             printf("Memory[%d]: Name = %s, Value = %s\n", i, Memory[i].name, Memory[i].value);
         }
     }
-    updateProgramCounter(2);
-    updateState(2,"Blocked");
-    updateInstructionsLeft(2);  
-    display(&Readyqueue1);
-    printf("Process ID: %d\n", process2.processID);
-    printf("State: %s\n", process2.state);
-    printf("Priority: %d\n", process2.priority);
-    printf("Program Counter: %d\n", process2.programCounter);
-    printf("Instructions Left: %d\n", process2.instructionsLeft);
+    // updateProgramCounter(2);
+    // updateState(2, "Blocked");
+    // updateInstructionsLeft(2);
+    // display(&Readyqueue1);
+    // printf("Process ID: %d\n", process1.processID);
+    // printf("State: %s\n", process1.state);
+    // printf("Priority: %d\n", process1.priority);
+    // printf("Program Counter: %d\n", process1.programCounter);
+    // printf("Instructions Left: %d\n", process1.instructionsLeft);
+    // printf("lower bound %d\n", process1.memoryLowerBound);
+    // printf("upper bound %d\n", process1.memoryUpperBound);
+    // char *t = getCurrInstruction(process1);
+    // printf("%s", t);
     // assign(A1_INDEX, "input");
     // printFromTo(2, 6);
     // writeFile("meow.txt", B1_INDEX);
     // readFile("meow.txt", B1_INDEX);
 
-    for (int i = 0; i < MEMORY_SIZE; i++)
-    {
-        if (strlen(Memory[i].name) > 0)
-        {
-            printf("Memory[%d]: Name = %s, Value = %s\n", i, Memory[i].name, Memory[i].value);
-        }
-    }
-    return 0;
+    // for (int i = 0; i < MEMORY_SIZE; i++)
+    // {
+    //     if (strlen(Memory[i].name) > 0)
+    //     {
+    //         printf("Memory[%d]: Name = %s, Value = %s\n", i, Memory[i].name, Memory[i].value);
+    //     }
+    // }
+    // return 0;
 }
